@@ -2,6 +2,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 
+lam = 0.06
 def find_y_new (X_s, Y_s, w, b):
     # w is a scale vector, b is an offset vector
     return np.multiply(Y_s, np.multiply(w, X_s)) + np.multiply(b, X_s)
@@ -98,7 +99,7 @@ def cdm (X_s, Y_s, X_t, Y_t):
 
 
     L_s = find_kernel(X_s, X_s)
-    R = L_s * np.linalg.inv(L_s + 0.08 * np.eye(len(L_s)))
+    R = L_s * np.linalg.inv(L_s + lam * np.eye(len(L_s)))
 
     # Repeat this loop until w, b converge
     num_itr = 0
@@ -126,9 +127,9 @@ def cdm (X_s, Y_s, X_t, Y_t):
 
         # Update values in w
         for p in range(len(w)):
-            dL_over_dK = np.transpose(np.matmul(np.matmul(np.linalg.inv(K_xx + 0.08 * np.eye(len(K_xx))), np.transpose(K_xx)), np.linalg.inv(K_xx + 0.08 *np.eye(len(K_xx)))))
+            dL_over_dK = np.transpose(np.matmul(np.matmul(np.linalg.inv(K_xx + lam * np.eye(len(K_xx))), np.transpose(K_xx)), np.linalg.inv(K_xx + lam *np.eye(len(K_xx)))))
             K_mul_Dp = np.multiply(K_ynew, D_p) #Used to be D_p[p]
-            dL_over_dKtilda = np.transpose(2 * np.matmul(np.matmul(np.linalg.inv(K_xx + 0.08 * np.eye(len(K_xx))), np.transpose(K_xtx)), np.linalg.inv(K_tt + 0.08 * np.eye(len(K_tt)))))
+            dL_over_dKtilda = np.transpose(2 * np.matmul(np.matmul(np.linalg.inv(K_xx + lam * np.eye(len(K_xx))), np.transpose(K_xtx)), np.linalg.inv(K_tt + lam * np.eye(len(K_tt)))))
             Ktilda_mul_Ep = np.multiply(K_ynewyt, E_p[p])
             gradient = np.trace(np.matmul(dL_over_dK, K_mul_Dp)) - np.trace(np.matmul(dL_over_dKtilda, Ktilda_mul_Ep))
             w[p] += step_size * gradient
@@ -148,9 +149,9 @@ def cdm (X_s, Y_s, X_t, Y_t):
 
         # Update values in b
         for p in range(len(b)):
-            dL_over_dK = np.transpose(np.matmul(np.matmul(np.linalg.inv(K_xx + 0.08 * np.eye(len(K_xx))), np.transpose(K_xx)), np.linalg.inv(K_xx + 0.08 * np.eye(len(K_xx)))))
+            dL_over_dK = np.transpose(np.matmul(np.matmul(np.linalg.inv(K_xx + lam * np.eye(len(K_xx))), np.transpose(K_xx)), np.linalg.inv(K_xx + lam * np.eye(len(K_xx)))))
             K_mul_D_ptilda = np.multiply(K_ynew, D_ptilda)
-            dL_over_dKtilda = np.transpose(2 * np.matmul(np.matmul(np.linalg.inv(K_xx + 0.08 * np.eye(len(K_xx))), np.transpose(K_xtx)), np.linalg.inv(K_tt + 0.08 * np.eye(len(K_tt)))))
+            dL_over_dKtilda = np.transpose(2 * np.matmul(np.matmul(np.linalg.inv(K_xx + lam * np.eye(len(K_xx))), np.transpose(K_xtx)), np.linalg.inv(K_tt + lam * np.eye(len(K_tt)))))
             Ktilda_mul_E_ptilda = np.multiply(K_ynewyt, E_ptilda[p])
             gradient = np.trace(np.matmul(dL_over_dK, K_mul_D_ptilda)) - np.trace(np.matmul(dL_over_dKtilda, Ktilda_mul_E_ptilda))
             b[p] += step_size * gradient
@@ -174,8 +175,12 @@ def cdm (X_s, Y_s, X_t, Y_t):
         """
 
         # Evaluate L
+        """
         mu_Y_new = find_sum(Y_new) / len(Y_new)
         mu_Y_t = find_sum(Y_t) / len(Y_t)
+        """
+        mu_Y_new = np.matmul(np.matmul(Y_new, np.linalg.inv(K_xx + lam * np.eye(len(K_xx)))), np.transpose(X_s))
+        mu_Y_t = np.matmul(np.matmul(Y_t, np.linalg.inv(K_tt + lam * np.eye(len(K_tt)))), np.transpose(X_t))
         L = pow((mu_Y_new - mu_Y_t), 2) + pow((np.linalg.norm(w - 1)), 2) + pow(np.linalg.norm(b), 2)
        
         """
@@ -213,10 +218,10 @@ if __name__ == "__main__":
     print(w)
     print(b)
 
-    """
+    
     plt.plot(X_s, w, 'r*', X_s, b, 'bo')
     plt.show()
-    """
+    
     prediction = np.zeros(len(X_s))
     for i in range(len(X_s) - 1):
         prediction[i] = Y_s[i] * w[i] * X_s[i] + b[i] * X_s[i]
